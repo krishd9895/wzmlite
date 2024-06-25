@@ -34,16 +34,15 @@ LOGGER = getLogger(__name__)
 load_dotenv('config.env', override=True)
 
 Interval = []
-QbInterval = []
-QbTorrents = {}
-GLOBAL_EXTENSION_FILTER = ['aria2', '!qB']
+
+GLOBAL_EXTENSION_FILTER = ['aria2']
 user_data = {}
 extra_buttons = {}
 list_drives_dict = {}
 shorteners_list = []
 categories_dict = {}
 aria2_options = {}
-qbit_options = {}
+
 queued_dl = {}
 queued_up = {}
 bot_cache = {}
@@ -61,7 +60,7 @@ except:
 download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
 queue_dict_lock = Lock()
-qb_listener_lock = Lock()
+
 status_reply_dict = {}
 download_dict = {}
 rss_dict = {}
@@ -104,9 +103,7 @@ if DATABASE_URL:
     if a2c_options := db.settings.aria2c.find_one({'_id': bot_id}):
         del a2c_options['_id']
         aria2_options = a2c_options
-    if qbit_opt := db.settings.qbittorrent.find_one({'_id': bot_id}):
-        del qbit_opt['_id']
-        qbit_options = qbit_opt
+    
     conn.close()
     BOT_TOKEN = environ.get('BOT_TOKEN', '')
     bot_id = BOT_TOKEN.split(':', 1)[0]
@@ -330,8 +327,8 @@ if RSS_CHAT.isdigit() or RSS_CHAT.startswith('-'):
 RSS_DELAY = environ.get('RSS_DELAY', '')
 RSS_DELAY = 600 if len(RSS_DELAY) == 0 else int(RSS_DELAY)
 
-TORRENT_TIMEOUT = environ.get('TORRENT_TIMEOUT', '')
-TORRENT_TIMEOUT = '' if len(TORRENT_TIMEOUT) == 0 else int(TORRENT_TIMEOUT)
+
+
 
 QUEUE_ALL = environ.get('QUEUE_ALL', '')
 QUEUE_ALL = '' if len(QUEUE_ALL) == 0 else int(QUEUE_ALL)
@@ -422,8 +419,7 @@ if len(RCLONE_SERVE_PASS) == 0:
 STORAGE_THRESHOLD = environ.get('STORAGE_THRESHOLD', '')
 STORAGE_THRESHOLD = '' if len(STORAGE_THRESHOLD) == 0 else float(STORAGE_THRESHOLD)
 
-TORRENT_LIMIT = environ.get('TORRENT_LIMIT', '')
-TORRENT_LIMIT = '' if len(TORRENT_LIMIT) == 0 else float(TORRENT_LIMIT)
+
 
 DIRECT_LIMIT = environ.get('DIRECT_LIMIT', '')
 DIRECT_LIMIT = '' if len(DIRECT_LIMIT) == 0 else float(DIRECT_LIMIT)
@@ -603,7 +599,7 @@ config_dict = {'ANIME_TEMPLATE': ANIME_TEMPLATE,
                'DEFAULT_UPLOAD': DEFAULT_UPLOAD,
                'DOWNLOAD_DIR': DOWNLOAD_DIR,
                'STORAGE_THRESHOLD': STORAGE_THRESHOLD,
-               'TORRENT_LIMIT': TORRENT_LIMIT,
+               
                'DIRECT_LIMIT': DIRECT_LIMIT,
                'YTDLP_LIMIT': YTDLP_LIMIT,
                'GDRIVE_LIMIT': GDRIVE_LIMIT,
@@ -685,7 +681,7 @@ config_dict = {'ANIME_TEMPLATE': ANIME_TEMPLATE,
                'SUDO_USERS': SUDO_USERS,
                'TELEGRAM_API': TELEGRAM_API,
                'TELEGRAM_HASH': TELEGRAM_HASH,
-               'TORRENT_TIMEOUT': TORRENT_TIMEOUT,
+               
                'UPSTREAM_REPO': UPSTREAM_REPO,
                'UPSTREAM_BRANCH': UPSTREAM_BRANCH,
                'UPGRADE_PACKAGES': UPGRADE_PACKAGES,
@@ -739,23 +735,7 @@ if ospath.exists('shorteners.txt'):
 if BASE_URL:
     Popen(f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent", shell=True)
 
-srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
-if not ospath.exists('.netrc'):
-    with open('.netrc', 'w'):
-        pass
-srun(["chmod", "600", ".netrc"])
-srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "aria.sh"])
-srun("./aria.sh", shell=True)
-if ospath.exists('accounts.zip'):
-    if ospath.exists('accounts'):
-        srun(["rm", "-rf", "accounts"])
-    srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    srun(["chmod", "-R", "777", "accounts"])
-    osremove('accounts.zip')
-if not ospath.exists('accounts'):
-    config_dict['USE_SERVICE_ACCOUNTS'] = False
-sleep(0.5)
+
 
 aria2 = ariaAPI(ariaClient(host="http://localhost", port=6800, secret=""))
 
@@ -792,19 +772,7 @@ else:
                for op in aria2c_global if op in aria2_options}
     aria2.set_global_options(a2c_glo)
 
-qb_client = get_client()
-if not qbit_options:
-    qbit_options = dict(qb_client.app_preferences())
-    del qbit_options['listen_port']
-    for k in list(qbit_options.keys()):
-        if k.startswith('rss'):
-            del qbit_options[k]
-else:
-    qb_opt = {**qbit_options}
-    for k, v in list(qb_opt.items()):
-        if v in ["", "*"]:
-            del qb_opt[k]
-    qb_client.app_set_preferences(qb_opt)
+
 
 log_info("Creating client from BOT_TOKEN")
 bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=1000,
