@@ -16,7 +16,7 @@ from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.ext_utils.task_manager import task_utils
 from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
 from bot.helper.mirror_utils.download_utils.gd_download import add_gd_download
-from bot.helper.mirror_utils.download_utils.qbit_download import add_qb_torrent
+# from bot.helper.mirror_utils.download_utils.qbit_download import add_qb_torrent
 from bot.helper.mirror_utils.download_utils.mega_download import add_mega_download
 from bot.helper.mirror_utils.download_utils.rclone_download import add_rclone_download
 from bot.helper.mirror_utils.rclone_utils.list import RcloneList
@@ -33,7 +33,7 @@ from bot.helper.ext_utils.bulk_links import extract_bulk_links
 from bot.modules.gen_pyro_sess import get_decrypt_key
 
 @new_task
-async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=None, bulk=[]):
+async def _mirror_leech(client, message, isLeech=False, sameDir=None, bulk=[]):
     text = message.text.split('\n')
     input_list = text[0].split(' ')
 
@@ -133,7 +133,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
         nextmsg = await sendMessage(message, " ".join(b_msg))
         nextmsg = await client.get_messages(chat_id=message.chat.id, message_ids=nextmsg.id)
         nextmsg.from_user = message.from_user
-        _mirror_leech(client, nextmsg, isQbit, isLeech, sameDir, bulk)
+        _mirror_leech(client, nextmsg, isLeech, sameDir, bulk)
         return
 
     if len(bulk) != 0:
@@ -159,7 +159,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
             sameDir['tasks'].add(nextmsg.id)
         nextmsg.from_user = message.from_user
         await sleep(5)
-        _mirror_leech(client, nextmsg, isQbit, isLeech, sameDir, bulk)
+        _mirror_leech(client, nextmsg, isLeech, sameDir, bulk)
 
     __run_multi()
 
@@ -237,7 +237,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
 
     if (not is_mega_link(link) or (is_mega_link(link) and not config_dict['MEGA_EMAIL'] and config_dict['DEBRID_LINK_API'])) \
         and (not is_magnet(link) or (config_dict['REAL_DEBRID_API'] and is_magnet(link))) \
-        and (not isQbit or (config_dict['REAL_DEBRID_API'] and is_magnet(link))) \
+        
         and not is_rclone_path(link) and not is_gdrive_link(link) and not link.endswith('.torrent') and file_ is None:
         content_type = await get_content_type(link)
         if content_type is None or re_match(r'text/html|text/plain', content_type):
@@ -333,7 +333,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
             await delete_links(message)
             return
 
-    listener = MirrorLeechListener(message, compress, extract, isQbit, isLeech, tag, select, seed, 
+    listener = MirrorLeechListener(message, compress, extract, isLeech, tag, select, seed, 
                                     sameDir, rcf, up, join, drive_id=drive_id, index_link=index_link, 
                                     source_url=org_link or link, leech_utils={'screenshots': sshots, 'thumb': thumb})
 
@@ -359,8 +359,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
     elif is_mega_link(link):
         await delete_links(message)
         await add_mega_download(link, f'{path}/', listener, name)
-    elif isQbit and 'real-debrid' not in link:
-        await add_qb_torrent(link, path, listener, ratio, seed_time)
+    
     elif not is_telegram_link(link):
         if ussr or pssw:
             auth = f"{ussr}:{pssw}"
@@ -469,24 +468,24 @@ async def mirror(client, message):
     _mirror_leech(client, message)
 
 
-async def qb_mirror(client, message):
-    _mirror_leech(client, message, isQbit=True)
+# async def qb_mirror(client, message):
+#     _mirror_leech(client, message, isQbit=True)
 
 
 async def leech(client, message):
     _mirror_leech(client, message, isLeech=True)
 
 
-async def qb_leech(client, message):
-    _mirror_leech(client, message, isQbit=True, isLeech=True)
+# async def qb_leech(client, message):
+#     _mirror_leech(client, message, isQbit=True, isLeech=True)
 
 
 bot.add_handler(MessageHandler(mirror, filters=command(
     BotCommands.MirrorCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
-bot.add_handler(MessageHandler(qb_mirror, filters=command(
-    BotCommands.QbMirrorCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
+# bot.add_handler(MessageHandler(qb_mirror, filters=command(
+#     BotCommands.QbMirrorCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
 bot.add_handler(MessageHandler(leech, filters=command(
     BotCommands.LeechCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
-bot.add_handler(MessageHandler(qb_leech, filters=command(
-    BotCommands.QbLeechCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
+# bot.add_handler(MessageHandler(qb_leech, filters=command(
+#     BotCommands.QbLeechCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
 bot.add_handler(CallbackQueryHandler(wzmlxcb, filters=regex(r'^wzmlx')))
