@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import PyMongoError
 from dotenv import dotenv_values
 
-from bot import DATABASE_URL, user_data, rss_dict, LOGGER, bot_id, config_dict, aria2_options, qbit_options, bot_loop
+from bot import DATABASE_URL, user_data, rss_dict, LOGGER, bot_id, config_dict, aria2_options, bot_loop
 
 
 class DbManger:
@@ -32,8 +32,7 @@ class DbManger:
         if await self.__db.settings.aria2c.find_one({'_id': bot_id}) is None:
             await self.__db.settings.aria2c.update_one({'_id': bot_id}, {'$set': aria2_options}, upsert=True)
         # Save qbittorrent options
-        if await self.__db.settings.qbittorrent.find_one({'_id': bot_id}) is None:
-            await self.__db.settings.qbittorrent.update_one({'_id': bot_id}, {'$set': qbit_options}, upsert=True)
+        
         # User Data
         if await self.__db.users[bot_id].find_one():
             rows = self.__db.users[bot_id].find({})
@@ -87,11 +86,7 @@ class DbManger:
         await self.__db.settings.aria2c.update_one({'_id': bot_id}, {'$set': {key: value}}, upsert=True)
         self.__conn.close
 
-    async def update_qbittorrent(self, key, value):
-        if self.__err:
-            return
-        await self.__db.settings.qbittorrent.update_one({'_id': bot_id}, {'$set': {key: value}}, upsert=True)
-        self.__conn.close
+    
 
     async def update_private_file(self, path):
         if self.__err:
