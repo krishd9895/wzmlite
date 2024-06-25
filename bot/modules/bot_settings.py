@@ -14,7 +14,7 @@ from time import time
 from io import BytesIO
 from aioshutil import rmtree as aiormtree
 
-from bot import config_dict, user_data, DATABASE_URL, MAX_SPLIT_SIZE, list_drives_dict, categories_dict, aria2, GLOBAL_EXTENSION_FILTER, status_reply_dict_lock, Interval, aria2_options, aria2c_global, IS_PREMIUM_USER, download_dict, qbit_options, get_client, LOGGER, bot, extra_buttons, shorteners_list
+from bot import config_dict, user_data, DATABASE_URL, MAX_SPLIT_SIZE, list_drives_dict, categories_dict, aria2, GLOBAL_EXTENSION_FILTER, status_reply_dict_lock, Interval, aria2_options, aria2c_global, IS_PREMIUM_USER, download_dict, get_client, LOGGER, bot, extra_buttons, shorteners_list
 from bot.helper.telegram_helper.message_utils import sendMessage, sendFile, editMessage, deleteMessage, update_all_messages
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -24,7 +24,7 @@ from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.ext_utils.help_messages import default_desp
 from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
-from bot.modules.torrent_search import initiate_search_tools
+# from bot.modules.torrent_search import initiate_search_tools
 from bot.modules.rss import addJob
 from bot.helper.themes import AVL_THEMES
 
@@ -126,7 +126,7 @@ async def load_config():
     if len(EXTENSION_FILTER) > 0:
         fx = EXTENSION_FILTER.split()
         GLOBAL_EXTENSION_FILTER.clear()
-        GLOBAL_EXTENSION_FILTER.extend(['aria2', '!qB'])
+        GLOBAL_EXTENSION_FILTER.extend(['aria2'])
         for x in fx:
             x = x.lstrip('.')
             GLOBAL_EXTENSION_FILTER.append(x.strip().lower())
@@ -244,31 +244,7 @@ async def load_config():
 
     USER_SESSION_STRING = environ.get('USER_SESSION_STRING', '')
 
-    TORRENT_TIMEOUT = environ.get('TORRENT_TIMEOUT', '')
-    downloads = aria2.get_downloads()
-    if len(TORRENT_TIMEOUT) == 0:
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(aria2.client.change_option, download.gid, {'bt-stop-timeout': '0'})
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options['bt-stop-timeout'] = '0'
-        if DATABASE_URL:
-            await DbManger().update_aria2('bt-stop-timeout', '0')
-        TORRENT_TIMEOUT = ''
-    else:
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(aria2.client.change_option, download.gid, {'bt-stop-timeout': TORRENT_TIMEOUT})
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options['bt-stop-timeout'] = TORRENT_TIMEOUT
-        if DATABASE_URL:
-            await DbManger().update_aria2('bt-stop-timeout', TORRENT_TIMEOUT)
-        TORRENT_TIMEOUT = int(TORRENT_TIMEOUT)
-
+    # 
     QUEUE_ALL = environ.get('QUEUE_ALL', '')
     QUEUE_ALL = '' if len(QUEUE_ALL) == 0 else int(QUEUE_ALL)
 
@@ -363,8 +339,7 @@ async def load_config():
     STORAGE_THRESHOLD = '' if len(
         STORAGE_THRESHOLD) == 0 else float(STORAGE_THRESHOLD)
 
-    TORRENT_LIMIT = environ.get('TORRENT_LIMIT', '')
-    TORRENT_LIMIT = '' if len(TORRENT_LIMIT) == 0 else float(TORRENT_LIMIT)
+   
 
     DIRECT_LIMIT = environ.get('DIRECT_LIMIT', '')
     DIRECT_LIMIT = '' if len(DIRECT_LIMIT) == 0 else float(DIRECT_LIMIT)
@@ -605,7 +580,7 @@ async def load_config():
                         'DOWNLOAD_DIR': DOWNLOAD_DIR,
                         'EXCEP_CHATS': EXCEP_CHATS,
                         'STORAGE_THRESHOLD': STORAGE_THRESHOLD,
-                        'TORRENT_LIMIT': TORRENT_LIMIT,
+                        
                         'DIRECT_LIMIT': DIRECT_LIMIT,
                         'YTDLP_LIMIT': YTDLP_LIMIT,
                         'GDRIVE_LIMIT': GDRIVE_LIMIT,
@@ -686,7 +661,7 @@ async def load_config():
                         'TELEGRAM_API': TELEGRAM_API,
                         'TELEGRAM_HASH': TELEGRAM_HASH,
                         'TIMEZONE': TIMEZONE,
-                        'TORRENT_TIMEOUT': TORRENT_TIMEOUT,
+                        
                         'UPSTREAM_REPO': UPSTREAM_REPO,
                         'UPSTREAM_BRANCH': UPSTREAM_BRANCH,
                         'UPGRADE_PACKAGES': UPGRADE_PACKAGES,
@@ -707,7 +682,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
     if key is None:
         buttons.ibutton('Config Variables', "botset var")
         buttons.ibutton('Private Files', "botset private")
-        buttons.ibutton('Qbit Settings', "botset qbit")
+        
         buttons.ibutton('Aria2c Settings', "botset aria")
         buttons.ibutton('Close', "botset close")
         msg = '<b><i>Bot Settings:</i></b>'
@@ -743,19 +718,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
         for x in range(0, len(aria2_options)-1, 10):
             buttons.ibutton(f'{int(x/10)+1}', f"botset start aria {x}", position='footer')
         msg = f'Aria2c Options | Page: {int(START/10)+1} | State: {STATE}'
-    elif key == 'qbit':
-        for k in list(qbit_options.keys())[START:10+START]:
-            buttons.ibutton(k, f"botset editqbit {k}")
-        if STATE == 'view':
-            buttons.ibutton('Edit', "botset edit qbit")
-        else:
-            buttons.ibutton('View', "botset view qbit")
-        buttons.ibutton('Back', "botset back")
-        buttons.ibutton('Close', "botset close")
-        for x in range(0, len(qbit_options)-1, 10):
-            buttons.ibutton(
-                f'{int(x/10)+1}', f"botset start qbit {x}", position='footer')
-        msg = f'Qbittorrent Options | Page: {int(START/10)+1} | State: {STATE}'
+    
     elif edit_type == 'editvar':
         msg = f'<b>Variable:</b> <code>{key}</code>\n\n'
         msg += f'<b>Description:</b> {default_desp.get(key, "No Description Provided")}\n\n'
@@ -792,11 +755,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=None, mess=None):
             msg = 'Send a key with value. Example: https-proxy-user:value'
         else:
             msg = f'Send a valid value for {key}. Timeout: 60 sec'
-    elif edit_type == 'editqbit':
-        buttons.ibutton('Back', "botset back qbit")
-        buttons.ibutton('Empty String', f"botset emptyqbit {key}")
-        buttons.ibutton('Close', "botset close")
-        msg = f'Send a valid value for {key}. Timeout: 60 sec'
+    
     button = buttons.build_menu(1) if key is None else buttons.build_menu(2)
     return msg, button
 
@@ -825,16 +784,7 @@ async def edit_variable(_, message, pre_message, key):
                     Interval[0].cancel()
                     Interval.clear()
                     Interval.append(setInterval(value, update_all_messages))
-    elif key == 'TORRENT_TIMEOUT':
-        value = int(value)
-        downloads = await sync_to_async(aria2.get_downloads)
-        for download in downloads:
-            if not download.is_complete:
-                try:
-                    await sync_to_async(aria2.client.change_option, download.gid, {'bt-stop-timeout': f'{value}'})
-                except Exception as e:
-                    LOGGER.error(e)
-        aria2_options['bt-stop-timeout'] = f'{value}'
+    
     elif key == 'LEECH_SPLIT_SIZE':
         value = min(int(value), MAX_SPLIT_SIZE)
     elif key == 'BOT_THEME':
@@ -852,7 +802,7 @@ async def edit_variable(_, message, pre_message, key):
     elif key == 'EXTENSION_FILTER':
         fx = value.split()
         GLOBAL_EXTENSION_FILTER.clear()
-        GLOBAL_EXTENSION_FILTER.extend(['aria2', '!qB'])
+        GLOBAL_EXTENSION_FILTER.extend(['aria2'])
         for x in fx:
             if x.strip().startswith('.'):
                 x = x.lstrip('.')
@@ -904,23 +854,6 @@ async def edit_aria(_, message, pre_message, key):
         await DbManger().update_aria2(key, value)
 
 
-async def edit_qbit(_, message, pre_message, key):
-    handler_dict[message.chat.id] = False
-    value = message.text
-    if value.lower() == 'true':
-        value = True
-    elif value.lower() == 'false':
-        value = False
-    elif key == 'max_ratio':
-        value = float(value)
-    elif value.isdigit():
-        value = int(value)
-    await sync_to_async(get_client().app_set_preferences, {key: value})
-    qbit_options[key] = value
-    await update_buttons(pre_message, 'qbit')
-    await deleteMessage(message)
-    if DATABASE_URL:
-        await DbManger().update_qbittorrent(key, value)
 
 
 async def update_private_file(_, message, pre_message):
@@ -1072,7 +1005,7 @@ async def edit_bot_settings(client, query):
         if key is None:
             globals()['START'] = 0
         await update_buttons(message, key)
-    elif data[1] in ['var', 'aria', 'qbit']:
+    elif data[1] in ['var', 'aria']:
         await query.answer()
         await update_buttons(message, data[1])
     elif data[1] == 'resetvar':
@@ -1090,18 +1023,8 @@ async def edit_bot_settings(client, query):
                             value, update_all_messages))
         elif data[2] == 'EXTENSION_FILTER':
             GLOBAL_EXTENSION_FILTER.clear()
-            GLOBAL_EXTENSION_FILTER.extend(['aria2', '!qB'])
-        elif data[2] == 'TORRENT_TIMEOUT':
-            downloads = await sync_to_async(aria2.get_downloads)
-            for download in downloads:
-                if not download.is_complete:
-                    try:
-                        await sync_to_async(aria2.client.change_option, download.gid, {'bt-stop-timeout': '0'})
-                    except Exception as e:
-                        LOGGER.error(e)
-            aria2_options['bt-stop-timeout'] = '0'
-            if DATABASE_URL:
-                await DbManger().update_aria2('bt-stop-timeout', '0')
+            GLOBAL_EXTENSION_FILTER.extend(['aria2'])
+        
         elif data[2] == 'BASE_URL':
             await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
         elif data[2] == 'BASE_URL_PORT':
@@ -1164,14 +1087,7 @@ async def edit_bot_settings(client, query):
                     LOGGER.error(e)
         if DATABASE_URL:
             await DbManger().update_aria2(data[2], '')
-    elif data[1] == 'emptyqbit':
-        handler_dict[message.chat.id] = False
-        await query.answer()
-        await sync_to_async(get_client().app_set_preferences, {data[2]: value})
-        qbit_options[data[2]] = ''
-        await update_buttons(message, 'qbit')
-        if DATABASE_URL:
-            await DbManger().update_qbittorrent(data[2], '')
+    
     elif data[1] == 'private':
         handler_dict[message.chat.id] = False
         await query.answer()
@@ -1228,24 +1144,7 @@ async def edit_bot_settings(client, query):
         elif value == '':
             value = None
         await query.answer(f'{value}', show_alert=True)
-    elif data[1] == 'editqbit' and STATE == 'edit':
-        handler_dict[message.chat.id] = False
-        await query.answer()
-        await update_buttons(message, data[2], data[1])
-        pfunc = partial(edit_qbit, pre_message=message, key=data[2])
-        rfunc = partial(update_buttons, message, 'var')
-        await event_handler(client, query, pfunc, rfunc)
-    elif data[1] == 'editqbit' and STATE == 'view':
-        value = qbit_options[data[2]]
-        if len(str(value)) > 200:
-            await query.answer()
-            with BytesIO(str.encode(value)) as out_file:
-                out_file.name = f"{data[2]}.txt"
-                await sendFile(message, out_file)
-            return
-        elif value == '':
-            value = None
-        await query.answer(f'{value}', show_alert=True)
+        
     elif data[1] == 'edit':
         await query.answer()
         globals()['STATE'] = 'edit'
