@@ -9,7 +9,7 @@ from subprocess import run as srun
 from sys import exit as sexit
 
 from .exceptions import NotSupportedExtractionArchive
-from bot import aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
+from bot import aria2, LOGGER, DOWNLOAD_DIR, GLOBAL_EXTENSION_FILTER
 from bot.helper.ext_utils.bot_utils import sync_to_async, cmd_exec
 
 ARCH_EXT = [".tar.bz2", ".tar.gz", ".bz2", ".gz", ".tar.xz", ".tar", ".tbz2", ".tgz", ".lzma2",
@@ -58,22 +58,10 @@ async def clean_download(path):
             pass
 
 
-async def start_cleanup():
-    get_client().torrents_delete(torrent_hashes="all")
-    try:
-        await aiormtree(DOWNLOAD_DIR)
-    except Exception:
-        pass
-    await makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-def clean_all():
-    aria2.remove_all(True)
-    get_client().torrents_delete(torrent_hashes="all")
-    try:
-        rmtree(DOWNLOAD_DIR)
-    except Exception:
-        pass
+
+
 
 
 def exit_clean_up(signal, frame):
