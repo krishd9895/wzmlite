@@ -21,7 +21,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot import bot, user, bot_name, config_dict, user_data, botStartTime, LOGGER, Interval, DATABASE_URL, INCOMPLETE_TASK_NOTIFIER, scheduler
 from bot.version import get_version
-from .helper.ext_utils.fs_utils import start_cleanup, clean_all, exit_clean_up
+# from .helper.ext_utils.fs_utils import start_cleanup, clean_all, exit_clean_up
 from .helper.ext_utils.bot_utils import get_readable_time, cmd_exec, sync_to_async, new_task, set_commands, update_user_ldata, get_stats
 from .helper.ext_utils.db_handler import DbManger
 from .helper.telegram_helper.bot_commands import BotCommands
@@ -109,7 +109,7 @@ async def restart(client, message):
     for interval in [Interval]:
         if interval:
             interval[0].cancel()
-    await sync_to_async(clean_all)
+    
     proc1 = await create_subprocess_exec('pkill', '-9', '-f', 'gunicorn|aria2c|ffmpeg|rclone')
     proc2 = await create_subprocess_exec('python3', 'update.py')
     await gather(proc1.wait(), proc2.wait())
@@ -242,7 +242,7 @@ async def log_check():
     
 
 async def main():
-    await gather(start_cleanup(), restart_notification(), search_images(), set_commands(bot), log_check())
+    await gather(restart_notification(), search_images(), set_commands(bot), log_check())
     await sync_to_async(start_aria2_listener, wait=False)
     
     bot.add_handler(MessageHandler(
@@ -262,9 +262,7 @@ async def main():
     bot.add_handler(MessageHandler(stats, filters=command(
         BotCommands.StatsCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
     LOGGER.info(f"WZML-X Bot [@{bot_name}] Started!")
-    if user:
-        LOGGER.info(f"WZ's User [@{user.me.username}] Ready!")
-    signal(SIGINT, exit_clean_up)
+    
 
 async def stop_signals():
     if user:
